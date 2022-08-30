@@ -29,16 +29,16 @@ pub struct CTuple6<A, B, C, D, E, F>(pub A, pub B, pub C, pub D, pub E, pub F);
 pub struct CTuple7<A, B, C, D, E, F, G>(pub A, pub B, pub C, pub D, pub E, pub F, pub G);
 
 macro impl_c_tuple($name:ident, $($t:ident),+) {
-    impl<$($t: HasTypeName),+> HasTypeName for $name<$($t),+> {
+    impl<$($t: HasTypeName),+> HasTypeName for $name<$($t),+> where $($t::Static: Sized),+ {
+        type Static = $name<$($t::Static),+>;
+
         fn type_name() -> RustTypeName {
             RustTypeName::Tuple {
                 elems: vec![$(<$t as HasTypeName>::type_name()),+]
             }
         }
     }
-    impl<$($t: HasStructure),+> HasStructure for $name<$($t),+> {
-        type Static = $name<$($t::Static),+>;
-
+    impl<$($t: HasStructure),+> HasStructure for $name<$($t),+> where $($t::Static: Sized),+ {
         fn structure() -> TypeStructure {
             TypeStructure::CTuple {
                 elements: vec![$(RustType::of::<$t>()),+]

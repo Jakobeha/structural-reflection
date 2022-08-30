@@ -1,5 +1,4 @@
 use std::iter::zip;
-use crate::misc::extract::extract;
 use crate::{RustPointerKind, RustType, TypeStructureBody};
 use crate::structure::{IsSubtypeOf, TypeStructure};
 
@@ -113,7 +112,7 @@ impl TypeStructure {
             *self = other;
             return;
         }
-        if let Some(elem) = extract!(self, TypeStructure::Slice { elem }) {
+        if let TypeStructure::Slice { elem } = self {
             match other {
                 TypeStructure::Array { elem: other_elem, length: other_length } => {
                     elem.unify(*other_elem);
@@ -140,7 +139,7 @@ impl TypeStructure {
             (TypeStructure::CReprStruct { body }, TypeStructure::CReprStruct { body: other_body }) => {
                 body.unify(other_body);
             }
-            (TypeStructure::Pointer { ptr_kind, refd_id, refd_name: _ }, TypeStructure::Pointer { ptr_kind: other_ptr_kind, refd_id: other_refd_id, refd_name: other_refd_name }) => {
+            (TypeStructure::Pointer { ptr_kind, refd_id, refd_name: _ }, TypeStructure::Pointer { ptr_kind: other_ptr_kind, refd_id: other_refd_id, refd_name: _ }) => {
                 ptr_kind.unify(other_ptr_kind);
                 if refd_id.is_none() {
                     *refd_id = other_refd_id;
@@ -225,6 +224,27 @@ impl RustPointerKind {
             (RustPointerKind::MutRef, RustPointerKind::MutRaw) => true,
             (RustPointerKind::MutRef, RustPointerKind::ImmRef) => true,
             (RustPointerKind::MutRef, RustPointerKind::MutRef) => true,
+        }
+    }
+
+    fn unify(&mut self, other: RustPointerKind) {
+        *self = match (*self, other) {
+            (RustPointerKind::ImmRaw, RustPointerKind::ImmRaw) => RustPointerKind::ImmRaw,
+            (RustPointerKind::ImmRaw, RustPointerKind::MutRaw) => RustPointerKind::ImmRaw,
+            (RustPointerKind::ImmRaw, RustPointerKind::ImmRef) => RustPointerKind::ImmRaw,
+            (RustPointerKind::ImmRaw, RustPointerKind::MutRef) => RustPointerKind::ImmRaw,
+            (RustPointerKind::MutRaw, RustPointerKind::ImmRaw) => RustPointerKind::ImmRaw,
+            (RustPointerKind::MutRaw, RustPointerKind::MutRaw) => RustPointerKind::MutRaw,
+            (RustPointerKind::MutRaw, RustPointerKind::ImmRef) => RustPointerKind::ImmRaw,
+            (RustPointerKind::MutRaw, RustPointerKind::MutRef) => RustPointerKind::MutRaw,
+            (RustPointerKind::ImmRef, RustPointerKind::ImmRaw) => RustPointerKind::ImmRaw,
+            (RustPointerKind::ImmRef, RustPointerKind::MutRaw) => RustPointerKind::ImmRaw,
+            (RustPointerKind::ImmRef, RustPointerKind::ImmRef) => RustPointerKind::ImmRef,
+            (RustPointerKind::ImmRef, RustPointerKind::MutRef) => RustPointerKind::ImmRef,
+            (RustPointerKind::MutRef, RustPointerKind::ImmRaw) => RustPointerKind::ImmRaw,
+            (RustPointerKind::MutRef, RustPointerKind::MutRaw) => RustPointerKind::MutRaw,
+            (RustPointerKind::MutRef, RustPointerKind::ImmRef) => RustPointerKind::ImmRef,
+            (RustPointerKind::MutRef, RustPointerKind::MutRef) => RustPointerKind::MutRef,
         }
     }
 }

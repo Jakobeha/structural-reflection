@@ -5,9 +5,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use bimap::BiHashMap;
 use lazy_static::lazy_static;
 use log::error;
-use crate::misc::catch_and_log::catch_and_log;
 use crate::{IntrinsicRustType, RustType};
-use crate::has_structure::HasStructure;
 use crate::intrinsic::UnknownIntrinsicType;
 
 use crate::structure::TypeStructure;
@@ -153,7 +151,7 @@ impl RustType {
 
     fn register_builtin<T: 'static>(builtins: &mut HashMap<RustTypeName, RustType>, name: &str) {
         let type_name = RustTypeName::try_from(name).expect("bad builtin name");
-        let intrinsic = IntrinsicRustType::of::<T>();
+        let intrinsic = IntrinsicRustType::of_static::<T>();
         let rust_type = RustType {
             type_id: Some(intrinsic.type_id),
             type_name: type_name.clone(),

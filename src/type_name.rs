@@ -345,7 +345,7 @@ pub enum RustTypeNameParseErrorCause {
 }
 
 #[derive(Logos)]
-pub(crate) enum RustTypeNameToken {
+pub enum RustTypeNameToken {
     #[token("*const")]
     ImmPtr,
     #[token("*mut")]
@@ -401,7 +401,7 @@ enum RustTypeNameParseState {
 }
 
 impl RustTypeName {
-    pub(crate) fn parse_from(lexer: &mut Lexer<'_, RustTypeNameToken>, parse_eof: bool) -> Result<Self, RustTypeNameParseError> {
+    pub fn parse_from(lexer: &mut Lexer<'_, RustTypeNameToken>, parse_eof: bool) -> Result<Self, RustTypeNameParseError> {
         let mut state = RustTypeNameParseState::Init;
         let mut ptr_stack = Vec::new();
         fn unexpected(lexer: &Lexer<'_, RustTypeNameToken>) -> RustTypeNameParseError {

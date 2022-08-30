@@ -1,5 +1,6 @@
 use std::any::{type_name, TypeId};
 use std::mem::{size_of, align_of};
+use crate::HasTypeName;
 
 // This can't be exposed, otherwise users could call IntrinsicRustType::of on it
 pub(super) enum UnknownIntrinsicType {}
@@ -22,7 +23,11 @@ impl PartialEq for IntrinsicRustType {
 impl Eq for IntrinsicRustType {}
 
 impl IntrinsicRustType {
-    pub fn of<T: 'static>() -> Self {
+    pub fn of<T: HasTypeName>() -> Self where T::Static: Sized {
+        IntrinsicRustType::of_static::<T::Static>()
+    }
+
+    pub fn of_static<T: 'static>() -> Self {
         IntrinsicRustType {
             type_id: TypeId::of::<T>(),
             type_name: type_name::<T>(),

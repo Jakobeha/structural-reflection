@@ -60,10 +60,10 @@ impl RustType {
     ///
     /// Tries to add this type data to the singleton registry if the crate feature `registry` is enabled,
     /// otherwise this is equivalent to [RustType::of_dont_register]
-    pub fn of<T: HasStructure>() -> Self {
+    pub fn of<T: HasStructure>() -> Self where T::Static: Sized {
         let rust_type = RustType::of_dont_register::<T>();
         #[cfg(feature = "registry")]
-        Self::register(Cow::Borrowed(&rust_type), Some(IntrinsicRustType::of::<T::Static>()));
+        Self::register(Cow::Borrowed(&rust_type), Some(IntrinsicRustType::of::<T>()));
         rust_type
     }
 

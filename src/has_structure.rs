@@ -1,19 +1,26 @@
-use std::mem::MaybeUninit;
+use std::any::TypeId;
 use crate::{TypeStructure, RustTypeName, RustPointerKind, PrimitiveType, RustType};
 
 pub trait HasTypeName {
+    /// Version of this where all references are converted into `'static`.
+    /// This is the type id that is used in the rest of `structural_reflection`
+    type Static: ?Sized + 'static;
+
     fn type_name() -> RustTypeName;
+
+    fn static_type_id() -> TypeId {
+        TypeId::of::<Self::Static>()
+    }
 }
 
 /// A type we know the structure of at compile type. We can derive this
 pub trait HasStructure: HasTypeName {
-    /// Version of this where all references are converted into `'static`
-    type Static: HasStructure + 'static;
-
     fn structure() -> TypeStructure;
 }
 
 impl HasTypeName for () {
+    type Static = ();
+
     fn type_name() -> RustTypeName {
         RustTypeName::Tuple {
             elems: vec![]
@@ -22,8 +29,6 @@ impl HasTypeName for () {
 }
 
 impl HasStructure for () {
-    type Static = ();
-
     fn structure() -> TypeStructure {
         TypeStructure::CTuple {
             elements: vec![],
@@ -32,6 +37,8 @@ impl HasStructure for () {
 }
 
 impl HasTypeName for str {
+    type Static = str;
+
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
             qualifiers: vec![],
@@ -41,7 +48,9 @@ impl HasTypeName for str {
     }
 }
 
-impl<T: HasTypeName> HasTypeName for [T] {
+impl<T: HasTypeName> HasTypeName for [T] where T::Static: Sized {
+    type Static = [T::Static];
+
     fn type_name() -> RustTypeName {
         RustTypeName::Slice {
             elem: Box::new(T::type_name())
@@ -49,9 +58,7 @@ impl<T: HasTypeName> HasTypeName for [T] {
     }
 }
 
-impl<T: HasStructure> HasStructure for [T] {
-    type Static = [T::Static];
-
+impl<T: HasStructure> HasStructure for [T] where T::Static: Sized {
     fn structure() -> TypeStructure {
         TypeStructure::Slice {
             elem: Box::new(RustType::of::<T>())
@@ -59,7 +66,9 @@ impl<T: HasStructure> HasStructure for [T] {
     }
 }
 
-impl<T: HasTypeName, const LEN: usize> HasTypeName for [T; LEN] {
+impl<T: HasTypeName, const LEN: usize> HasTypeName for [T; LEN] where T::Static: Sized {
+    type Static = [T::Static; LEN];
+
     fn type_name() -> RustTypeName {
         RustTypeName::Array {
             elem: Box::new(T::type_name()),
@@ -68,9 +77,7 @@ impl<T: HasTypeName, const LEN: usize> HasTypeName for [T; LEN] {
     }
 }
 
-impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] {
-    type Static = [T::Static; LEN];
-
+impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] where T::Static: Sized {
     fn structure() -> TypeStructure {
         TypeStructure::Array {
             elem: Box::new(RustType::of::<T>()),
@@ -81,6 +88,8 @@ impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] {
 
 macro impl_has_structure_primitive($prim_tt:tt, $prim_type:ident) {
 impl HasTypeName for $prim_tt {
+    type Static = $prim_tt;
+
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
             qualifiers: vec![],
@@ -99,6 +108,8 @@ impl HasStructure for $prim_tt {
 
 macro impl_has_structure_pointer(($($ptr_tt:tt)+), ($($static_ptr_tt:tt)+), $ptr_kind:ident) {
 impl<T: HasTypeName + ?Sized> HasTypeName for $($ptr_tt)+ T {
+    type Static = $($static_ptr_tt)+ T::Static;
+
     fn type_name() -> RustTypeName {
         RustTypeName::Pointer {
             ptr_kind: RustPointerKind::$ptr_kind,
@@ -108,11 +119,11 @@ impl<T: HasTypeName + ?Sized> HasTypeName for $($ptr_tt)+ T {
 }
 
 impl<T: HasTypeName + ?Sized> HasStructure for $($ptr_tt)+ T {
-    type Static = $($static_ptr_tt)+ T;
-
     fn structure() -> TypeStructure {
         TypeStructure::Pointer {
-            refd: T::type_name(),
+            ptr_kind: RustPointerKind::$ptr_kind,
+            refd_id: Some(T::static_type_id()),
+            refd_name: T::type_name(),
         }
     }
 }
