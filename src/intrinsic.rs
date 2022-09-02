@@ -23,8 +23,8 @@ impl PartialEq for IntrinsicRustType {
 impl Eq for IntrinsicRustType {}
 
 impl IntrinsicRustType {
-    pub fn of<T: HasTypeName>() -> Self where T::Static: Sized {
-        IntrinsicRustType::of_static::<T::Static>()
+    pub fn of<T: HasTypeName>() -> Self where T::StaticId: Sized {
+        IntrinsicRustType::of_static::<T::StaticId>()
     }
 
     pub fn of_static<T: 'static>() -> Self {

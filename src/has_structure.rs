@@ -2,14 +2,16 @@ use std::any::TypeId;
 use crate::{TypeStructure, RustTypeName, RustPointerKind, PrimitiveType, RustType};
 
 pub trait HasTypeName {
-    /// Version of this where all references are converted into `'static`.
+    /// "type id" used for this type, which may not actually be static.
+    /// Instances of this type with different lifetime parameters will share the same `StaticId`,
+    /// instances of different types or generics should not.
     /// This is the type id that is used in the rest of `structural_reflection`
-    type Static: ?Sized + 'static;
+    type StaticId: ?Sized + 'static;
 
     fn type_name() -> RustTypeName;
 
     fn static_type_id() -> TypeId {
-        TypeId::of::<Self::Static>()
+        TypeId::of::<Self::StaticId>()
     }
 }
 
@@ -19,7 +21,7 @@ pub trait HasStructure: HasTypeName {
 }
 
 impl HasTypeName for () {
-    type Static = ();
+    type StaticId = ();
 
     fn type_name() -> RustTypeName {
         RustTypeName::Tuple {
@@ -37,7 +39,7 @@ impl HasStructure for () {
 }
 
 impl HasTypeName for str {
-    type Static = str;
+    type StaticId = str;
 
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
@@ -48,8 +50,8 @@ impl HasTypeName for str {
     }
 }
 
-impl<T: HasTypeName> HasTypeName for [T] where T::Static: Sized {
-    type Static = [T::Static];
+impl<T: HasTypeName> HasTypeName for [T] where T::StaticId: Sized {
+    type StaticId = [T::StaticId];
 
     fn type_name() -> RustTypeName {
         RustTypeName::Slice {
@@ -58,7 +60,7 @@ impl<T: HasTypeName> HasTypeName for [T] where T::Static: Sized {
     }
 }
 
-impl<T: HasStructure> HasStructure for [T] where T::Static: Sized {
+impl<T: HasStructure> HasStructure for [T] where T::StaticId: Sized {
     fn structure() -> TypeStructure {
         TypeStructure::Slice {
             elem: Box::new(RustType::of::<T>())
@@ -66,8 +68,8 @@ impl<T: HasStructure> HasStructure for [T] where T::Static: Sized {
     }
 }
 
-impl<T: HasTypeName, const LEN: usize> HasTypeName for [T; LEN] where T::Static: Sized {
-    type Static = [T::Static; LEN];
+impl<T: HasTypeName, const LEN: usize> HasTypeName for [T; LEN] where T::StaticId: Sized {
+    type StaticId = [T::StaticId; LEN];
 
     fn type_name() -> RustTypeName {
         RustTypeName::Array {
@@ -77,7 +79,7 @@ impl<T: HasTypeName, const LEN: usize> HasTypeName for [T; LEN] where T::Static:
     }
 }
 
-impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] where T::Static: Sized {
+impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] where T::StaticId: Sized {
     fn structure() -> TypeStructure {
         TypeStructure::Array {
             elem: Box::new(RustType::of::<T>()),
@@ -88,7 +90,7 @@ impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] where T::Stati
 
 macro impl_has_structure_primitive($prim_tt:tt, $prim_type:ident) {
 impl HasTypeName for $prim_tt {
-    type Static = $prim_tt;
+    type StaticId = $prim_tt;
 
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
@@ -108,7 +110,7 @@ impl HasStructure for $prim_tt {
 
 macro impl_has_structure_pointer(($($ptr_tt:tt)+), ($($static_ptr_tt:tt)+), $ptr_kind:ident) {
 impl<T: HasTypeName + ?Sized> HasTypeName for $($ptr_tt)+ T {
-    type Static = $($static_ptr_tt)+ T::Static;
+    type StaticId = $($static_ptr_tt)+ T::StaticId;
 
     fn type_name() -> RustTypeName {
         RustTypeName::Pointer {
