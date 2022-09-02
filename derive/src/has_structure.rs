@@ -1,8 +1,9 @@
 use proc_macro2::{Literal, TokenStream};
 
 use quote::quote;
-use syn::{Data, DataStruct, DataEnum, Fields};
+use syn::{Data, DataStruct, DataEnum, Fields, parse_quote, Generics, WhereClause, TypeGenerics};
 use syn::spanned::Spanned;
+use crate::common::{common_derive, recursive_impl_generics};
 
 pub(crate) fn derive_impl(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     let repr = input.attrs.iter()
@@ -31,7 +32,7 @@ fn derive_c_impl(input: syn::DeriveInput) -> syn::Result<TokenStream> {
 
 fn derive_c_struct(input: &syn::DeriveInput, s: &DataStruct) -> syn::Result<TokenStream> {
     let ident = &input.ident;
-    let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
+    let (impl_generics, type_generics, where_clause) = common_derive_has_structure(&input.generics);
     let body = derive_body(&s.fields)?;
     Ok(quote! {
         #[automatically_derived]
@@ -47,7 +48,7 @@ fn derive_c_struct(input: &syn::DeriveInput, s: &DataStruct) -> syn::Result<Toke
 
 fn derive_c_enum(input: &syn::DeriveInput, s: &DataEnum) -> syn::Result<TokenStream> {
     let ident = &input.ident;
-    let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
+    let (impl_generics, type_generics, where_clause) = common_derive_has_structure(&input.generics);
     let variants = s.variants.iter().map(|variant| {
         let name = Literal::string(&variant.ident.to_string());
         let body = derive_body(&variant.fields)?;
@@ -68,6 +69,13 @@ fn derive_c_enum(input: &syn::DeriveInput, s: &DataEnum) -> syn::Result<TokenStr
     })
 }
 
+fn common_derive_has_structure(generics: &Generics) -> (TokenStream, TypeGenerics<'_>, Option<WhereClause>) {
+    let (_, type_generics, _) = generics.split_for_impl();
+    let (_, where_clause) = common_derive(generics);
+    let impl_generics = recursive_impl_generics(generics, &parse_quote!(structural_reflection::HasStructure));
+    (impl_generics, type_generics, where_clause)
+}
+
 fn derive_body(fields: &Fields) -> syn::Result<TokenStream> {
     Ok(match fields {
         Fields::Unit => quote!(structural_reflection::TypeStructureBody::None),
@@ -80,7 +88,7 @@ fn derive_body(fields: &Fields) -> syn::Result<TokenStream> {
         }
         Fields::Named(fields) => {
             let fields = fields.named.iter().map(|field| {
-                let name = Literal::string(&variant.ident.to_string());
+                let name = Literal::string(&field.ident.as_ref().unwrap().to_string());
                 let ty = &field.ty;
                 quote!(structural_reflection::TypeStructureBodyField {
                     name: #name,
