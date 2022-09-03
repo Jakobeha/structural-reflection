@@ -53,7 +53,7 @@ fn derive_c_enum(input: &syn::DeriveInput, s: &DataEnum) -> syn::Result<TokenStr
         let name = Literal::string(&variant.ident.to_string());
         let body = derive_body(&variant.fields)?;
         Ok::<TokenStream, syn::Error>(quote!(structural_reflection::TypeEnumVariant {
-            name: #name,
+            variant_name: String::from(#name),
             body: #body
         }))
     }).try_collect::<Vec<TokenStream>>()?;
@@ -91,7 +91,7 @@ fn derive_body(fields: &Fields) -> syn::Result<TokenStream> {
                 let name = Literal::string(&field.ident.as_ref().unwrap().to_string());
                 let ty = &field.ty;
                 quote!(structural_reflection::TypeStructureBodyField {
-                    name: #name,
+                    name: String::from(#name),
                     rust_type: structural_reflection::RustType::of::<#ty>(),
                 })
             });

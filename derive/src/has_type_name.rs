@@ -5,6 +5,7 @@ use syn::parse_quote;
 use crate::common::{common_derive, recursive_impl_generics};
 
 pub(crate) fn derive_impl(input: syn::DeriveInput) -> syn::Result<TokenStream> {
+    let vis = &input.vis;
     let ident = &input.ident;
     let static_id_ident = Ident::new(&format!("__{}Static", ident), ident.span());
     let (_, type_generics, _) = input.generics.split_for_impl();
@@ -26,7 +27,8 @@ pub(crate) fn derive_impl(input: syn::DeriveInput) -> syn::Result<TokenStream> {
     Ok(quote! {
         // Static doesn't actually need internals as only the TypeId is used
         #[automatically_derived]
-        struct #static_id_ident #static_impl_generics {
+        #[doc(hidden)]
+        #vis struct #static_id_ident #static_impl_generics {
             __phantom: #phantom_type
         }
 

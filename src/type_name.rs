@@ -244,7 +244,7 @@ impl RustTypeName {
     pub fn unqualified(&self) -> RustTypeNameDisplay<'_, 'static> {
         RustTypeNameDisplay {
             type_name: self,
-            qualify: RustTypeNameDisplayQualify::Always
+            qualify: RustTypeNameDisplayQualify::Never
         }
     }
 
