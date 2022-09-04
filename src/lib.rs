@@ -67,14 +67,48 @@ impl RustType {
         rust_type
     }
 
+    /// Returns the type of an array containing metadata of an array of `T` and the given length.
+    ///
+    /// Tries to add this type data to the singleton registry if the crate feature `registry` is enabled,
+    /// otherwise this is equivalent to [RustType::of_array_dont_register]
+    pub fn of_array<T: HasStructure>(len: usize) -> Self where T::StaticId: Sized {
+        let rust_type = RustType::of_array_dont_register::<T>(len);
+        #[cfg(feature = "registry")]
+        {
+            let elem_type = rust_type.structure.array_elem_type_and_length().unwrap().0;
+            Self::register(Cow::Borrowed(elem_type), Some(IntrinsicRustType::of::<T>()));
+            Self::register(Cow::Borrowed(&rust_type), None);
+        }
+        rust_type
+    }
+
     /// Returns the type containing metadata of `T`, and doesn't try to add to the singleton registry
     pub fn of_dont_register<T: HasStructure>() -> Self {
         RustType {
-            type_id: None,
+            type_id: Some(T::static_type_id()),
             type_name: T::type_name(),
             size: size_of::<T>(),
             align: align_of::<T>(),
             structure: T::structure()
+        }
+    }
+
+    /// Returns the type containing metadata of an array of `T` with the given length,
+    /// and doesn't try to add to the singleton registry
+    pub fn of_array_dont_register<T: HasStructure>(len: usize) -> Self {
+        let elem_type = RustType::of_dont_register::<T>();
+        RustType {
+            type_id: None,
+            type_name: RustTypeName::Array {
+                elem: Box::new(T::type_name()),
+                length: len
+            },
+            size: infer_array_size(&elem_type, len),
+            align: infer_array_align(&elem_type),
+            structure: TypeStructure::Array {
+                elem: Box::new(elem_type),
+                length: len
+            }
         }
     }
 

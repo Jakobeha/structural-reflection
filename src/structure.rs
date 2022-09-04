@@ -83,10 +83,19 @@ impl TypeStructure {
     }
 
     /// If this is an array or slice, returns the element type
-    pub fn array_slice_elem_type(&self) -> Option<&RustType> {
+    pub fn array_or_slice_elem_type(&self) -> Option<&RustType> {
         match self {
             TypeStructure::Array { elem, length: _ } => Some(elem),
             TypeStructure::Slice { elem } => Some(elem),
+            _ => None
+        }
+    }
+
+    /// If this is an array or c-tuple, returns the length
+    pub fn array_or_tuple_length(&self) -> Option<usize> {
+        match self {
+            TypeStructure::CTuple { elements } => Some(elements.len()),
+            TypeStructure::Array { elem: _, length } => Some(*length),
             _ => None
         }
     }
@@ -100,7 +109,7 @@ impl TypeStructure {
     }
 
     /// If this is a tuple struct, returns the element types
-    pub fn tuple_struct_tuple_item_types(&self) -> Option<&Vec<RustType>> {
+    pub fn tuple_struct_item_types(&self) -> Option<&Vec<RustType>> {
         match self {
             TypeStructure::CReprStruct { body: TypeStructureBody::Tuple(tuple_items) } => Some(tuple_items),
             _ => None
@@ -108,7 +117,7 @@ impl TypeStructure {
     }
 
     /// If this is a tuple or tuple struct, returns the element types
-    pub fn tuple_or_struct_tuple_item_types(&self) -> Option<&Vec<RustType>> {
+    pub fn tuple_or_tuple_struct_item_types(&self) -> Option<&Vec<RustType>> {
         match self {
             TypeStructure::CTuple { elements } => Some(elements),
             TypeStructure::CReprStruct { body: TypeStructureBody::Tuple(tuple_items) } => Some(tuple_items),
