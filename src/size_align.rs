@@ -74,9 +74,9 @@ pub fn infer_c_tuple_size<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> us
         let size = elem.size;
         let align = elem.align;
         if cumulative_size % align != 0 {
-            cumulative_size += align - (cumulative_size % align);
+            cumulative_size = cumulative_size.saturating_add(align - (cumulative_size % align));
         }
-        cumulative_size += size;
+        cumulative_size = cumulative_size.saturating_add(size);
     }
     cumulative_size
 }
@@ -96,9 +96,9 @@ pub fn infer_array_size(elem: &RustType, length: usize) -> usize {
     let mut aligned_size = elem.size;
     let align = elem.align;
     if aligned_size % align != 0 {
-        aligned_size += align - aligned_size % align;
+        aligned_size = aligned_size.saturating_add(align - aligned_size % align);
     }
-    aligned_size * length
+    aligned_size.saturating_mul(length)
 }
 
 pub fn infer_array_align(elem: &RustType) -> usize {
