@@ -596,7 +596,8 @@ impl RustTypeName {
                 let next_peek_char = peek_char.as_ref().and_then(|_| remaining_chars.next());
                 if let Some(peek_char) = peek_char {
                     match &peek_char {
-                        ',' | ')' | ']' | '>' | '}' => break,
+                        // Characters which will not be in a type at this position
+                        '+' | '-' | '*' | '/' | '=' | '.' | ',' | ')' | ']' | '>' | '}' => break,
                         ':' if next_peek_char != Some(':') => break,
                         _ => {}
                     }
