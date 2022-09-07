@@ -30,6 +30,7 @@ join-lazy-fmt = "0.9.2"
 # Rust patterns
 bimap = { version = "0.6.2", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
+auto_enums = "0.7.12"
 # Logging
 log = { version = "0.4.17", optional = true }
 

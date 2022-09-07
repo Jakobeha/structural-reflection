@@ -1,6 +1,8 @@
 use std::any::TypeId;
 use std::fmt::{Display, Formatter};
+use std::iter::{empty, repeat};
 use crate::{PrimitiveType, RustPointerKind, RustType, RustTypeName};
+use auto_enums::auto_enum;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeStructure {
@@ -132,6 +134,24 @@ impl TypeStructure {
             _ => None
         }
     }
+
+    /// If this is a tuple, struct, array, or enum with exactly one variant, returns the element types.
+    #[auto_enum]
+    pub fn general_compound_elem_types(&self) -> Option<impl Iterator<Item=&RustType>> {
+        #[auto_enum(Iterator)]
+        let result = match self {
+            TypeStructure::CTuple { elements } => elements.iter(),
+            TypeStructure::CReprStruct { body } => body.general_compound_elem_types(),
+            #[nested]
+            TypeStructure::CReprEnum { variants } => match variants.len() {
+                1 => variants[0].body.general_compound_elem_types(),
+                _ => None?
+            },
+            TypeStructure::Array { elem, length } => repeat(elem.as_ref()).take(*length),
+            _ => None?
+        };
+        Some(result)
+    }
 }
 
 impl TypeStructureBody {
@@ -140,6 +160,15 @@ impl TypeStructureBody {
             TypeStructureBody::None => TypeStructureBodyForm::None,
             TypeStructureBody::Tuple(_) => TypeStructureBodyForm::Tuple,
             TypeStructureBody::Fields(_) => TypeStructureBodyForm::Fields
+        }
+    }
+
+    #[auto_enum(Iterator)]
+    fn general_compound_elem_types(&self) -> impl Iterator<Item=&RustType> {
+        match self {
+            TypeStructureBody::Tuple(tuple_items) => tuple_items.iter(),
+            TypeStructureBody::Fields(fields) => fields.iter().map(|field| &field.rust_type),
+            TypeStructureBody::None => empty()
         }
     }
 }
