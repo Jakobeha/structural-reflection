@@ -32,8 +32,8 @@ impl TypeStructure {
             TypeStructure::CReprStruct { body } => Some(body.infer_align()),
             TypeStructure::Pointer { .. } => Some(align_of::<*const ()>()),
             TypeStructure::CTuple { elements } => Some(infer_c_tuple_align(elements)),
-            TypeStructure::Array { elem, length: _ } => Some(infer_array_align(elem)),
-            TypeStructure::Slice { elem } => Some(infer_array_align(elem))
+            TypeStructure::Array { elem, length: _ } => Some(infer_slice_align(elem)),
+            TypeStructure::Slice { elem } => Some(infer_slice_align(elem))
         }
     }
 }
@@ -97,7 +97,7 @@ struct InferCTupleElemOffsets<'a, I: Iterator<Item=&'a RustType>> {
     elems: I
 }
 
-pub fn infer_c_tuple_elem_offsets<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> impl Iterator<Item=usize> {
+pub fn infer_c_tuple_elem_offsets<'a, I: IntoIterator<Item=&'a RustType>>(elems: I) -> impl Iterator<Item=usize> + 'a where I::IntoIter: 'a {
     InferCTupleElemOffsets {
         cumulative_offset: 0,
         elems: elems.into_iter()
@@ -134,8 +134,17 @@ pub fn infer_array_size(elem: &RustType, length: usize) -> usize {
     aligned_size.saturating_mul(length)
 }
 
-pub fn infer_array_align(elem: &RustType) -> usize {
+pub fn infer_slice_align(elem: &RustType) -> usize {
     elem.align
+}
+
+pub fn infer_slice_offsets(elem: &RustType) -> impl Iterator<Item=usize> {
+    let mut aligned_size = elem.size;
+    let align = elem.align;
+    if aligned_size % align != 0 {
+        aligned_size = aligned_size.saturating_add(align - aligned_size % align);
+    }
+    (0..).map(move |i| i * aligned_size)
 }
 
 fn discriminant_size(_num_discriminants: usize) -> usize {

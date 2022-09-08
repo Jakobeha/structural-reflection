@@ -104,7 +104,7 @@ impl RustType {
                 length: len
             },
             size: infer_array_size(&elem_type, len),
-            align: infer_array_align(&elem_type),
+            align: infer_slice_align(&elem_type),
             structure: TypeStructure::Array {
                 elem: Box::new(elem_type),
                 length: len
