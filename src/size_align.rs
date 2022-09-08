@@ -92,6 +92,39 @@ pub fn infer_c_tuple_align<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> u
     max_align
 }
 
+struct InferCTupleElemOffsets<'a, I: Iterator<Item=&'a RustType>> {
+    cumulative_offset: usize,
+    elems: I
+}
+
+pub fn infer_c_tuple_elem_offsets<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> impl Iterator<Item=usize> {
+    InferCTupleElemOffsets {
+        cumulative_offset: 0,
+        elems: elems.into_iter()
+    }
+}
+
+impl<'a, I: Iterator<Item=&'a RustType>> Iterator for InferCTupleElemOffsets<'a, I> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.elems.next().map(|elem| {
+            let size = elem.size;
+            let align = elem.align;
+            if self.cumulative_offset % align != 0 {
+                self.cumulative_offset = self.cumulative_offset.saturating_add(align - (self.cumulative_offset % align));
+            }
+            let offset = self.cumulative_offset;
+            self.cumulative_offset = self.cumulative_offset.saturating_add(size);
+            offset
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.elems.size_hint()
+    }
+}
+
 pub fn infer_array_size(elem: &RustType, length: usize) -> usize {
     let mut aligned_size = elem.size;
     let align = elem.align;
