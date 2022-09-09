@@ -167,6 +167,7 @@ impl<T: HasTypeName + ?Sized> HasStructure for $($ptr_tt)+ T {
     fn structure() -> TypeStructure {
         TypeStructure::Pointer {
             ptr_kind: RustPointerKind::$ptr_kind,
+            ptr_size: std::mem::size_of::<$($static_ptr_tt)+ T::StaticId>(),
             refd_id: Some(T::static_type_id()),
             refd_name: T::type_name(),
         }

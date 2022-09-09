@@ -72,12 +72,12 @@ impl TypeStructure {
             (TypeStructure::CReprStruct { body }, TypeStructure::CReprStruct { body: other_body }) => {
                 body.is_structural_subtype_of(other_body)
             }
-            (TypeStructure::Pointer { ptr_kind, refd_id, refd_name }, TypeStructure::Pointer { ptr_kind: other_ptr_kind, refd_id: other_refd_id, refd_name: other_refd_name }) => {
+            (TypeStructure::Pointer { ptr_kind, ptr_size, refd_id, refd_name }, TypeStructure::Pointer { ptr_kind: other_ptr_kind, ptr_size: other_ptr_size, refd_id: other_refd_id, refd_name: other_refd_name }) => {
                 let refd_equal = match (refd_id, other_refd_id) {
                     (Some(refd_id), Some(other_refd_id)) => refd_id == other_refd_id,
                     _ => refd_name == other_refd_name
                 };
-                IsSubtypeOf::known(ptr_kind.is_subtype_of(other_ptr_kind) && refd_equal)
+                IsSubtypeOf::known(ptr_kind.is_subtype_of(other_ptr_kind) && ptr_size == other_ptr_size && refd_equal)
             }
             (TypeStructure::CTuple { elements }, TypeStructure::CTuple { elements: other_elements }) => {
                 tuple_is_subtype_of(elements, other_elements)
@@ -139,7 +139,7 @@ impl TypeStructure {
             (TypeStructure::CReprStruct { body }, TypeStructure::CReprStruct { body: other_body }) => {
                 body.unify(other_body);
             }
-            (TypeStructure::Pointer { ptr_kind, refd_id, refd_name: _ }, TypeStructure::Pointer { ptr_kind: other_ptr_kind, refd_id: other_refd_id, refd_name: _ }) => {
+            (TypeStructure::Pointer { ptr_kind, ptr_size: _, refd_id, refd_name: _ }, TypeStructure::Pointer { ptr_kind: other_ptr_kind, ptr_size: _, refd_id: other_refd_id, refd_name: _ }) => {
                 ptr_kind.unify(other_ptr_kind);
                 if refd_id.is_none() {
                     *refd_id = other_refd_id;

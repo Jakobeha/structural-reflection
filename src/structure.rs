@@ -21,10 +21,12 @@ pub enum TypeStructure {
     Array { elem: Box<RustType>, length: usize },
     /// Array with unknown length
     Slice { elem: Box<RustType> },
-    /// Thin pointer (only thin pointers are supported)
+    /// Pointer
     Pointer {
         /// Pointer kind, as mutable pointers are not subtypes of immutable pointers and raw pointers are not subtypes of references
         ptr_kind: RustPointerKind,
+        /// Size of pointer including metadata. For thin pointers this is `size_of::<*const ()>()`
+        ptr_size: usize,
         refd_id: Option<TypeId>,
         /// Remember: we don't need refd structure because it doesn't affect the pointer size.
         refd_name: RustTypeName
