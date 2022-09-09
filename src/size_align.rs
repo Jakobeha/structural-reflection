@@ -1,4 +1,4 @@
-use std::mem::{align_of, size_of};
+use std::mem::align_of;
 use crate::{RustType, TypeEnumVariant, TypeStructureBody};
 use crate::structure::TypeStructure;
 
@@ -13,7 +13,7 @@ impl TypeStructure {
                 Some(discriminant_size + data_size)
             }
             TypeStructure::CReprStruct { body } => Some(body.infer_size()),
-            TypeStructure::Pointer { .. } => Some(size_of::<*const ()>()),
+            TypeStructure::Pointer { ptr_size, .. } => Some(*ptr_size),
             TypeStructure::CTuple { elements } => Some(infer_c_tuple_size(elements)),
             TypeStructure::Array { elem, length } => Some(infer_array_size(elem, *length)),
             TypeStructure::Slice { .. } => None
