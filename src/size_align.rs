@@ -70,6 +70,7 @@ impl TypeStructureBody {
 
 pub fn infer_c_tuple_size<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> usize {
     let mut cumulative_size = 0;
+    let mut max_align = 0;
     for elem in elems {
         let size = elem.size;
         let align = elem.align;
@@ -77,6 +78,12 @@ pub fn infer_c_tuple_size<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> us
             cumulative_size = cumulative_size.saturating_add(align - (cumulative_size % align));
         }
         cumulative_size = cumulative_size.saturating_add(size);
+        if max_align < align {
+            max_align = align;
+        }
+    }
+    if max_align != 0 && cumulative_size % max_align != 0 {
+        cumulative_size = cumulative_size.saturating_add(max_align - (cumulative_size % max_align));
     }
     cumulative_size
 }
