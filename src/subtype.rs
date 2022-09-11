@@ -15,8 +15,6 @@ impl RustType {
             IsSubtypeOf::Yes
         } else if other.type_name.is_bottom() {
             IsSubtypeOf::No
-        } else if self.type_name.is_unknown() || other.type_name.is_unknown() {
-            IsSubtypeOf::Unknown
         } else if self.type_id.is_some() && other.type_id.is_some() {
             IsSubtypeOf::known(self.type_id == other.type_id)
         } else {

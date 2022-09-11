@@ -95,15 +95,6 @@ impl TypeStructure {
         }
     }
 
-    /// If this is an array or c-tuple, returns the length
-    pub fn array_or_tuple_length(&self) -> Option<usize> {
-        match self {
-            TypeStructure::CTuple { elements } => Some(elements.len()),
-            TypeStructure::Array { elem: _, length } => Some(*length),
-            _ => None
-        }
-    }
-
     /// If this is a tuple, returns the element types
     pub fn tuple_elem_types(&self) -> Option<&Vec<RustType>> {
         match self {
@@ -137,6 +128,17 @@ impl TypeStructure {
         }
     }
 
+    /// If this is a tuple, struct, array, or enum with exactly one variant, returns the number of elements
+    pub fn general_compound_length(&self) -> Option<usize> {
+        match self {
+            TypeStructure::CTuple { elements } => Some(elements.len()),
+            TypeStructure::CReprStruct { body } => Some(body.general_compound_len()),
+            TypeStructure::CReprEnum { variants } if variants.len() == 1 => Some(variants[0].body.general_compound_len()),
+            TypeStructure::Array { elem: _, length } => Some(*length),
+            _ => None
+        }
+    }
+
     /// If this is a tuple, struct, array, or enum with exactly one variant, returns the element types.
     #[auto_enum]
     pub fn general_compound_elem_types(&self) -> Option<impl Iterator<Item=&RustType>> {
@@ -162,6 +164,14 @@ impl TypeStructureBody {
             TypeStructureBody::None => TypeStructureBodyForm::None,
             TypeStructureBody::Tuple(_) => TypeStructureBodyForm::Tuple,
             TypeStructureBody::Fields(_) => TypeStructureBodyForm::Fields
+        }
+    }
+
+    fn general_compound_len(&self) -> usize {
+        match self {
+            TypeStructureBody::None => 0,
+            TypeStructureBody::Tuple(tuple_items) => tuple_items.len(),
+            TypeStructureBody::Fields(fields) => fields.len()
         }
     }
 
