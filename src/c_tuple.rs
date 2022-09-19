@@ -1,33 +1,5 @@
 use crate::{HasStructure, HasTypeName, RustType, RustTypeName, TypeStructure};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple1<A>(pub A);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple2<A, B>(pub A, pub B);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple3<A, B, C>(pub A, pub B, pub C);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple4<A, B, C, D>(pub A, pub B, pub C, pub D);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple5<A, B, C, D, E>(pub A, pub B, pub C, pub D, pub E);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple6<A, B, C, D, E, F>(pub A, pub B, pub C, pub D, pub E, pub F);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(C)]
-pub struct CTuple7<A, B, C, D, E, F, G>(pub A, pub B, pub C, pub D, pub E, pub F, pub G);
-
 pub macro CTuple {
     () => { () },
     ($A:ty) => { $crate::c_tuple::CTuple1<$A> },
@@ -50,7 +22,31 @@ pub macro c_tuple {
     ($a:expr, $b:expr, $c:expr, $d:expr, $e:expr, $f:expr, $g:expr) => { $crate::c_tuple::CTuple7($a, $b, $c, $d, $e, $f, $g) },
 }
 
-macro impl_c_tuple($name:ident, $($t:ident),+) {
+macro impl_c_tuple($name:ident, $($t:ident $x:ident),+) {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[repr(C)]
+    pub struct $name<$($t),+>($(pub $t),+);
+
+    impl<$($t),+> $name<$($t),+> {
+        #[allow(unused_parens)]
+        pub fn from_reg(($($x),+): ($($t),+))-> Self {
+            $name($($x),+)
+        }
+
+        pub fn from_trailing(($($x, )+): ($($t, )+))-> Self {
+            $name($($x),+)
+        }
+
+        #[allow(unused_parens)]
+        pub fn into_reg($name($($x),+): Self) -> ($($t),+) {
+            ($($x),+)
+        }
+
+        pub fn into_trailing($name($($x),+): Self) -> ($($t, )+) {
+            ($($x, )+)
+        }
+    }
+
     impl<$($t: HasTypeName),+> HasTypeName for $name<$($t),+> where $($t::StaticId: Sized),+ {
         type StaticId = $name<$($t::StaticId),+>;
 
@@ -69,10 +65,10 @@ macro impl_c_tuple($name:ident, $($t:ident),+) {
     }
 }
 
-impl_c_tuple!(CTuple1, A);
-impl_c_tuple!(CTuple2, A, B);
-impl_c_tuple!(CTuple3, A, B, C);
-impl_c_tuple!(CTuple4, A, B, C, D);
-impl_c_tuple!(CTuple5, A, B, C, D, E);
-impl_c_tuple!(CTuple6, A, B, C, D, E, F);
-impl_c_tuple!(CTuple7, A, B, C, D, E, F, G);
+impl_c_tuple!(CTuple1, A a);
+impl_c_tuple!(CTuple2, A a, B b);
+impl_c_tuple!(CTuple3, A a, B b, C c);
+impl_c_tuple!(CTuple4, A a, B b, C c, D d);
+impl_c_tuple!(CTuple5, A a, B b, C c, D d, E e);
+impl_c_tuple!(CTuple6, A a, B b, C c, D d, E e, F f);
+impl_c_tuple!(CTuple7, A a, B b, C c, D d, E e, F f, G g);
