@@ -109,8 +109,6 @@ impl<T: HasStructure, const LEN: usize> HasStructure for [T; LEN] where T::Stati
     }
 }
 
-
-
 macro impl_opaque($($qualifier:ident::)*[$ty:ident]$(<$($tparam:ident),+>)?) {
 impl $(<$($tparam: HasTypeName),+>)? HasTypeName for $($qualifier::)*$ty$(<$($tparam),+>)? {
     type StaticId = $($qualifier::)*$ty $(<$($tparam::StaticId),+>)?;
