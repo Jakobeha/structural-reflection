@@ -1,5 +1,15 @@
 use crate::{HasStructure, HasTypeName, RustType, RustTypeName, TypeStructure};
 
+pub trait CTuple {
+    type AsReg;
+    type AsTrailing;
+
+    fn from_reg(x: Self::AsReg)-> Self;
+    fn from_trailing(x: Self::AsTrailing) -> Self;
+    fn into_reg(self) -> Self::AsReg;
+    fn into_trailing(self) -> Self::AsTrailing;
+}
+
 pub macro CTuple {
     () => { () },
     ($A:ty) => { $crate::c_tuple::CTuple1<$A> },
@@ -27,7 +37,11 @@ macro impl_c_tuple($name:ident, $($t:ident $x:ident),+) {
     #[repr(C)]
     pub struct $name<$($t),+>($(pub $t),+);
 
-    impl<$($t),+> $name<$($t),+> {
+    impl<$($t),+> CTuple for $name<$($t),+> {
+        #[allow(unused_parens)]
+        type AsReg = ($($t),+);
+        type AsTrailing = ($($t, )+);
+
         #[allow(unused_parens)]
         pub fn from_reg(($($x),+): ($($t),+))-> Self {
             $name($($x),+)
