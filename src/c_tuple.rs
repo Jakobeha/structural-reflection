@@ -43,20 +43,22 @@ macro impl_c_tuple($name:ident, $($t:ident $x:ident),+) {
         type AsTrailing = ($($t, )+);
 
         #[allow(unused_parens)]
-        pub fn from_reg(($($x),+): ($($t),+))-> Self {
+        fn from_reg(($($x),+): ($($t),+))-> Self {
             $name($($x),+)
         }
 
-        pub fn from_trailing(($($x, )+): ($($t, )+))-> Self {
+        fn from_trailing(($($x, )+): ($($t, )+))-> Self {
             $name($($x),+)
         }
 
         #[allow(unused_parens)]
-        pub fn into_reg($name($($x),+): Self) -> ($($t),+) {
+        fn into_reg(self) -> ($($t),+) {
+            let $name($($x),+) = self;
             ($($x),+)
         }
 
-        pub fn into_trailing($name($($x),+): Self) -> ($($t, )+) {
+        fn into_trailing(self) -> ($($t, )+) {
+            let $name($($x),+) = self;
             ($($x, )+)
         }
     }
@@ -86,3 +88,24 @@ impl_c_tuple!(CTuple4, A a, B b, C c, D d);
 impl_c_tuple!(CTuple5, A a, B b, C c, D d, E e);
 impl_c_tuple!(CTuple6, A a, B b, C c, D d, E e, F f);
 impl_c_tuple!(CTuple7, A a, B b, C c, D d, E e, F f, G g);
+
+/* impl CTuple for () {
+    type AsReg = ();
+    type AsTrailing = ();
+
+    fn from_reg((): ()) -> Self {
+        ()
+    }
+
+    fn from_trailing((): ()) -> Self {
+        ()
+    }
+
+    fn into_reg(self) -> () {
+        ()
+    }
+
+    fn into_trailing(self) -> () {
+        ()
+    }
+} */

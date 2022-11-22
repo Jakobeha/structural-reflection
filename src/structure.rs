@@ -60,7 +60,7 @@ pub enum TypeStructureBodyForm {
 }
 
 /// Field in a field struct or variant
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeStructureBodyField {
     pub name: String,
     pub rust_type: RustType
