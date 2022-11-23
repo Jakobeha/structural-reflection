@@ -1,6 +1,6 @@
 use std::any::TypeId;
 use std::marker::PhantomData;
-use crate::{TypeStructure, RustTypeName, RustPointerKind, PrimitiveType, RustType, TypeStructureBody};
+use crate::{TypeStructure, RustTypeName, RustPointerKind, PrimitiveType, RustType, TypeStructureBody, qualifier};
 
 pub trait HasTypeName {
     /// "type id" used for this type, which may not actually be static.
@@ -44,7 +44,7 @@ impl<T: HasTypeName> HasTypeName for PhantomData<T> {
 
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
-            qualifiers: vec!["std".to_string(), "marker".to_string()],
+            qualifier: qualifier!["std", "marker"],
             simple_name: "PhantomData".to_string(),
             generic_args: vec![T::type_name()],
         }
@@ -64,7 +64,7 @@ impl HasTypeName for str {
 
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
-            qualifiers: vec![],
+            qualifier: qualifier![],
             simple_name: "str".to_string(),
             generic_args: vec![]
         }
@@ -115,7 +115,7 @@ impl $(<$($tparam: HasTypeName),+>)? HasTypeName for $($qualifier::)*$ty$(<$($tp
 
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
-            qualifiers: vec![$(stringify!($qualifier).to_string(),)*],
+            qualifier: qualifier![$(stringify!($qualifier)),*],
             simple_name: stringify!($ty).to_string(),
             generic_args: vec![$($($tparam::type_name()),*)?],
         }
@@ -135,7 +135,7 @@ impl HasTypeName for $prim_tt {
 
     fn type_name() -> RustTypeName {
         RustTypeName::Ident {
-            qualifiers: vec![],
+            qualifier: qualifier![],
             simple_name: stringify!($prim_tt).to_string(),
             generic_args: vec![]
         }

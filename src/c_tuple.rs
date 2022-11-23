@@ -89,7 +89,7 @@ impl_c_tuple!(CTuple5, A a, B b, C c, D d, E e);
 impl_c_tuple!(CTuple6, A a, B b, C c, D d, E e, F f);
 impl_c_tuple!(CTuple7, A a, B b, C c, D d, E e, F f, G g);
 
-/* impl CTuple for () {
+impl CTuple for () {
     type AsReg = ();
     type AsTrailing = ();
 
@@ -108,4 +108,4 @@ impl_c_tuple!(CTuple7, A a, B b, C c, D d, E e, F f, G g);
     fn into_trailing(self) -> () {
         ()
     }
-} */
+}

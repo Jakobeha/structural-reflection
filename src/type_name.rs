@@ -10,9 +10,9 @@ use logos::{Lexer, Logos};
 /// A detailed rust type name which lets you extract components like generic args if identifier, or underlying type if a reference.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RustTypeName {
-    /// Identifier. Primitive type names are also identifiers, and they have no qualifiers or generic_args
+    /// Identifier. Primitive type names are also identifiers, and they have no qualifier or generic_args
     Ident {
-        qualifiers: Vec<String>,
+        qualifier: Qualifier,
         simple_name: String,
         generic_args: Vec<RustTypeName>
     },
@@ -42,6 +42,18 @@ pub enum RustTypeName {
     Slice {
         elem: Box<RustTypeName>
     },
+}
+
+/// Module qualifier
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
+#[display(fmt = "{}", "\"::\".join(self.0.iter())")]
+pub struct Qualifier(Vec<String>);
+
+/// Macro to create literal qualifier
+pub macro qualifier {
+    [$($qualifier:expr),*] => {
+        Qualifier::from(vec![$($qualifier.to_string()),*])
+    }
 }
 
 /// "pointer" encompasses both references and raw pointers, and this enum contains their immutable (shared) and mutable variants.
@@ -112,9 +124,9 @@ impl<'a> FromIterator<&'a str> for DuplicateNamesInScope {
 
 impl RustTypeName {
     /// Identifier with no generic arguments
-    pub fn scoped_simple(qualifiers: Vec<String>, simple_name: String) -> RustTypeName {
+    pub fn scoped_simple(qualifier: Qualifier, simple_name: String) -> RustTypeName {
         RustTypeName::Ident {
-            qualifiers,
+            qualifier,
             simple_name,
             generic_args: Vec::new()
         }
@@ -123,7 +135,7 @@ impl RustTypeName {
     /// Identifier with no qualifier or generic arguments
     pub fn simple(simple_name: String) -> RustTypeName {
         RustTypeName::Ident {
-            qualifiers: Vec::new(),
+            qualifier: Qualifier::local(),
             simple_name,
             generic_args: Vec::new()
         }
@@ -172,7 +184,7 @@ impl RustTypeName {
     /// Convert generic parameters in idents to `{unknown}`, ignore everything else.
     /// Useful e.g. so you can register types like `Box<{unknown}>` if you know the size and alignment.
     pub fn erase_generics(&mut self) {
-        if let RustTypeName::Ident { qualifiers: _, simple_name: _, generic_args } = self {
+        if let RustTypeName::Ident { qualifier: _, simple_name: _, generic_args } = self {
             for generic_arg in generic_args.iter_mut() {
                 *generic_arg = RustTypeName::unknown();
             }
@@ -180,11 +192,11 @@ impl RustTypeName {
     }
 
     /// Remove a qualifier if is is the same as the given qualifier
-    pub fn remove_qualifier(&mut self, qualifier_to_remove: &[String]) {
+    pub fn remove_qualifier(&mut self, qualifier_to_remove: &Qualifier) {
         match self {
-            RustTypeName::Ident { qualifiers, simple_name: _, generic_args } => {
-                if qualifiers.as_slice() == qualifier_to_remove {
-                    qualifiers.clear();
+            RustTypeName::Ident { qualifier, simple_name: _, generic_args } => {
+                if qualifier == qualifier_to_remove {
+                    qualifier.0.clear();
                 }
                 for generic_arg in generic_args {
                     generic_arg.remove_qualifier(qualifier_to_remove);
@@ -211,7 +223,7 @@ impl RustTypeName {
     pub fn iter_simple_names(&self) -> impl Iterator<Item=&str> {
         match self {
             RustTypeName::Ident {
-                qualifiers: _,
+                qualifier: _,
                 simple_name,
                 generic_args
             } => {
@@ -258,6 +270,63 @@ impl RustTypeName {
     }
 }
 
+
+impl Qualifier {
+    /// Local = no qualifier
+    pub fn local() -> Self {
+        Qualifier(Vec::new())
+    }
+
+    pub fn is_local(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Iterator over the qualifier's components
+    pub fn iter(&self) -> impl Iterator<Item=&str> {
+        self.0.iter().map(|s| s.as_str())
+    }
+
+    /// Mutable iterator over the qualifier's components
+    pub fn iter_mut(&mut self) -> impl Iterator<Item=&mut String> {
+        self.0.iter_mut()
+    }
+}
+
+impl From<Vec<String>> for Qualifier {
+    fn from(v: Vec<String>) -> Self {
+        Qualifier(v)
+    }
+}
+
+// region Qualifier iterator
+impl<'a> IntoIterator for &'a Qualifier {
+    type Item = &'a str;
+    type IntoIter = std::iter::Map<std::slice::Iter<'a, String>, fn(&'a String) -> &'a str>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().map(|s| s.as_str())
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Qualifier {
+    type Item = &'a mut String;
+    type IntoIter = std::slice::IterMut<'a, String>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut()
+    }
+}
+
+impl IntoIterator for Qualifier {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<String>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+// endregion
+
 // region printing
 impl<'a, 'b> Display for RustTypeNameDisplay<'a, 'b> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -270,12 +339,12 @@ impl<'a, 'b> Display for RustTypeNameDisplay<'a, 'b> {
         match &self.type_name {
             RustTypeName::Ident {
                 simple_name,
-                qualifiers,
+                qualifier,
                 generic_args
             } => {
                 if self.qualify.do_qualify(simple_name) {
-                    for qualifier in qualifiers {
-                        write!(f, "{}::", qualifier)?;
+                    for qualifier_item in qualifier {
+                        write!(f, "{}::", qualifier_item)?;
                     }
                 }
                 write!(f, "{}", simple_name)?;
@@ -377,6 +446,34 @@ pub enum RustTypeNameToken {
     Error,
 }
 
+#[derive(Debug, Display, Error)]
+pub enum QualifierParseError {
+    #[display(fmt = "bad qualifier ident: {}", _0)]
+    BadIdent(#[error(not(source))] String)
+}
+
+impl Qualifier {
+    fn check(idents: &[String]) -> Result<(), QualifierParseError> {
+        for ident in idents {
+            if !ident.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+                return Err(QualifierParseError::BadIdent(ident.clone()));
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Qualifier {
+    type Error = QualifierParseError;
+
+    fn try_from(str: &'a str) -> Result<Self, Self::Error> {
+        let idents = str.split("::").map(String::from).collect::<Vec<_>>();
+        Qualifier::check(&idents)?;
+        Ok(Qualifier::from(idents))
+    }
+}
+
+
 impl<'a> TryFrom<&'a str> for RustTypeName {
     type Error = RustTypeNameParseError;
 
@@ -389,11 +486,11 @@ impl<'a> TryFrom<&'a str> for RustTypeName {
 enum RustTypeNameParseState {
     Init,
     AfterIdent {
-        qualifiers: Vec<String>,
+        qualifier: Qualifier,
         simple_name: String
     },
     ExpectsIdent {
-        qualifiers: Vec<String>
+        qualifier: Qualifier
     },
     Done {
         result: RustTypeName
@@ -432,7 +529,7 @@ impl RustTypeName {
             state = match state {
                 RustTypeNameParseState::Init => match token {
                     RustTypeNameToken::Ident => RustTypeNameParseState::AfterIdent {
-                        qualifiers: Vec::new(),
+                        qualifier: Qualifier::local(),
                         simple_name: lexer.slice().to_string()
                     },
                     RustTypeNameToken::ImmPtr => {
@@ -549,13 +646,13 @@ impl RustTypeName {
                     _ => return Err(unexpected(lexer))
                 }
                 RustTypeNameParseState::AfterIdent {
-                    mut qualifiers,
+                    mut qualifier,
                     simple_name
                 } => match token {
                     RustTypeNameToken::DoubleColon => {
-                        qualifiers.push(simple_name);
+                        qualifier.0.push(simple_name);
                         RustTypeNameParseState::ExpectsIdent {
-                            qualifiers
+                            qualifier
                         }
                     }
                     RustTypeNameToken::Punct('<') => {
@@ -571,7 +668,7 @@ impl RustTypeName {
                         }
                         RustTypeNameParseState::Done {
                             result: RustTypeName::Ident {
-                                qualifiers,
+                                qualifier,
                                 simple_name,
                                 generic_args: elems
                             }
@@ -580,10 +677,10 @@ impl RustTypeName {
                     _ => return Err(unexpected(lexer))
                 }
                 RustTypeNameParseState::ExpectsIdent {
-                    qualifiers
+                    qualifier
                 } => match token {
                     RustTypeNameToken::Ident => RustTypeNameParseState::AfterIdent {
-                        qualifiers,
+                        qualifier,
                         simple_name: lexer.slice().to_string()
                     },
                     _ => return Err(unexpected(lexer))
@@ -606,10 +703,10 @@ impl RustTypeName {
         }
         let mut result = match state {
             RustTypeNameParseState::AfterIdent {
-                qualifiers,
+                qualifier,
                 simple_name
             } => RustTypeName::Ident {
-                qualifiers,
+                qualifier,
                 simple_name,
                 generic_args: Vec::new()
             },
