@@ -74,16 +74,13 @@ pub fn infer_c_tuple_size<'a>(elems: impl IntoIterator<Item=&'a RustType>) -> us
     for elem in elems {
         let size = elem.size;
         let align = elem.align;
-        if cumulative_size % align != 0 {
-            cumulative_size = cumulative_size.saturating_add(align - (cumulative_size % align));
-        }
-        cumulative_size = cumulative_size.saturating_add(size);
+        cumulative_size = align_up(cumulative_size, align).saturating_add(size);
         if max_align < align {
             max_align = align;
         }
     }
-    if max_align != 0 && cumulative_size % max_align != 0 {
-        cumulative_size = cumulative_size.saturating_add(max_align - (cumulative_size % max_align));
+    if max_align != 0 {
+        cumulative_size = align_up(cumulative_size, max_align);
     }
     cumulative_size
 }
@@ -118,9 +115,7 @@ impl<'a, I: Iterator<Item=&'a RustType>> Iterator for InferCTupleElemOffsets<'a,
         self.elems.next().map(|elem| {
             let size = elem.size;
             let align = elem.align;
-            if self.cumulative_offset % align != 0 {
-                self.cumulative_offset = self.cumulative_offset.saturating_add(align - (self.cumulative_offset % align));
-            }
+            self.cumulative_offset = align_up(self.cumulative_offset, align);
             let offset = self.cumulative_offset;
             self.cumulative_offset = self.cumulative_offset.saturating_add(size);
             offset
@@ -135,9 +130,7 @@ impl<'a, I: Iterator<Item=&'a RustType>> Iterator for InferCTupleElemOffsets<'a,
 pub fn infer_array_size(elem: &RustType, length: usize) -> usize {
     let mut aligned_size = elem.size;
     let align = elem.align;
-    if aligned_size % align != 0 {
-        aligned_size = aligned_size.saturating_add(align - aligned_size % align);
-    }
+    aligned_size = align_up(aligned_size, align);
     aligned_size.saturating_mul(length)
 }
 
@@ -148,9 +141,7 @@ pub fn infer_slice_align(elem: &RustType) -> usize {
 pub fn infer_slice_offsets(elem: &RustType) -> impl Iterator<Item=usize> {
     let mut aligned_size = elem.size;
     let align = elem.align;
-    if aligned_size % align != 0 {
-        aligned_size = aligned_size.saturating_add(align - aligned_size % align);
-    }
+    aligned_size = align_up(aligned_size, align);
     (0..).map(move |i| i * aligned_size)
 }
 
@@ -169,7 +160,7 @@ fn discriminant_align(_num_discriminants: usize) -> usize {
 /// Round up `offset` so that it's a multiple of align
 pub fn align_up(offset: usize, align: usize) -> usize {
     if offset % align != 0 {
-        offset + align - offset % align
+        offset.saturating_add(align - offset % align)
     } else {
         offset
     }
