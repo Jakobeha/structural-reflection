@@ -165,3 +165,12 @@ fn discriminant_align(_num_discriminants: usize) -> usize {
     // same as above
     4
 }
+
+/// Round up `offset` so that it's a multiple of align
+pub fn align_up(offset: usize, align: usize) -> usize {
+    if offset % align != 0 {
+        offset + align - offset % align
+    } else {
+        offset
+    }
+}
