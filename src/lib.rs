@@ -2,6 +2,7 @@
 #![feature(decl_macro)]
 #![feature(drain_filter)]
 #![feature(associated_type_defaults)]
+#![feature(iter_repeat_n)]
 
 use std::any::TypeId;
 #[cfg(feature = "registry")]
@@ -82,6 +83,21 @@ impl RustType {
         rust_type
     }
 
+    /// Returns the type of a slice (arbitrary-length array) containing metadata of a slice of `T`.
+    ///
+    /// Tries to add this type data to the singleton registry if the crate feature `registry` is enabled,
+    /// otherwise this is equivalent to [RustType::of_slice_dont_register]
+    pub fn of_slice<T: HasStructure>() -> Self where T::StaticId: Sized {
+        let rust_type = RustType::of_slice_dont_register::<T>();
+        #[cfg(feature = "registry")]
+        {
+            let elem_type = rust_type.structure.slice_elem_type().unwrap();
+            Self::register(Cow::Borrowed(elem_type), Some(IntrinsicRustType::of::<T>()));
+            Self::register(Cow::Borrowed(&rust_type), None);
+        }
+        rust_type
+    }
+
     /// Returns the type containing metadata of `T`, and doesn't try to add to the singleton registry
     pub fn of_dont_register<T: HasStructure>() -> Self {
         RustType {
@@ -108,6 +124,23 @@ impl RustType {
             structure: TypeStructure::Array {
                 elem: Box::new(elem_type),
                 length: len
+            }
+        }
+    }
+
+    /// Returns the type containing metadata of a slice (arbitrary-length slice) of `T` with the
+    /// given length, and doesn't try to add to the singleton registry
+    pub fn of_slice_dont_register<T: HasStructure>() -> Self {
+        let elem_type = RustType::of_dont_register::<T>();
+        RustType {
+            type_id: None,
+            type_name: RustTypeName::Slice {
+                elem: Box::new(T::type_name())
+            },
+            size: usize::MAX,
+            align: infer_slice_align(&elem_type),
+            structure: TypeStructure::Slice {
+                elem: Box::new(elem_type)
             }
         }
     }

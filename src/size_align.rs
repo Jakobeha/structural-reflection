@@ -6,6 +6,8 @@ impl TypeStructure {
     pub fn infer_size(&self) -> Option<usize> {
         match self {
             TypeStructure::Opaque => None,
+            TypeStructure::OpaqueTuple { elements } => Some(infer_c_tuple_size(elements)),
+            TypeStructure::OpaqueFields { fields } => Some(infer_c_tuple_size(fields.iter().map(|field| &field.rust_type))),
             TypeStructure::Primitive(primitive) => Some(primitive.size()),
             TypeStructure::CReprEnum { variants } => {
                 let discriminant_size = discriminant_size(variants.len());
@@ -23,6 +25,8 @@ impl TypeStructure {
     pub fn infer_align(&self) -> Option<usize> {
         match self {
             TypeStructure::Opaque => None,
+            TypeStructure::OpaqueTuple { elements } => Some(infer_c_tuple_align(elements)),
+            TypeStructure::OpaqueFields { fields } => Some(infer_c_tuple_align(fields.iter().map(|field| &field.rust_type))),
             TypeStructure::Primitive(primitive) => Some(primitive.align()),
             TypeStructure::CReprEnum { variants } => {
                 let discriminant_align = discriminant_align(variants.len());
