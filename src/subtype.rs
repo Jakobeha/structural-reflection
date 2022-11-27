@@ -103,8 +103,8 @@ impl TypeStructure {
                 IsSubtypeOf::known(primitive == other_primitive)
             },
             (TypeStructure::CReprEnum { variants }, TypeStructure::CReprEnum { variants: other_variants }) => {
-                other_variants.iter().map(|other_variant| {
-                    match variants.iter().find(|variant| other_variant.variant_name == variant.variant_name) {
+                variants.iter().map(|other_variant| {
+                    match other_variants.iter().find(|variant| variant.variant_name == other_variant.variant_name) {
                         None => IsSubtypeOf::No,
                         Some(variant) => variant.body.is_structural_subtype_of(&other_variant.body)
                     }
@@ -402,8 +402,8 @@ fn fields_is_subtype_of(fields: &[TypeStructureBodyField], other_fields: &[TypeS
     if fields.len() < other_fields.len() {
         IsSubtypeOf::No
     } else {
-        fields.iter().map(|field| {
-            match other_fields.iter().find(|other_field| other_field.name == field.name) {
+        other_fields.iter().map(|field| {
+            match fields.iter().find(|other_field| field.name == other_field.name) {
                 None => IsSubtypeOf::No,
                 Some(other_field) => field.rust_type.is_rough_subtype_of(&other_field.rust_type)
             }
