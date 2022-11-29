@@ -25,7 +25,11 @@ mod primitive;
 mod registry;
 mod subtype;
 mod size_align;
+mod index;
 mod intrinsic;
+
+/// Miscellaneous helpers which may go into other crates in the future
+pub mod misc;
 
 pub use type_name::*;
 pub use has_structure::*;
@@ -35,6 +39,7 @@ pub use primitive::*;
 pub use registry::*;
 pub use subtype::*;
 pub use size_align::*;
+pub use index::*;
 pub use intrinsic::*;
 
 /// Name, structure, type id, and layout info for a rust type.
