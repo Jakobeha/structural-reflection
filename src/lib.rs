@@ -183,6 +183,21 @@ impl RustType {
         }
     }
 
+    /// Returns the type of a c-tuple of the given element types
+    pub fn c_tuple(elems: Vec<RustType>) -> Self {
+        RustType {
+            type_id: None,
+            type_name: RustTypeName::Tuple {
+                elems: elems.iter().map(|child| child.type_name.clone()).collect()
+            },
+            size: infer_c_tuple_size(&elems),
+            align: infer_c_tuple_align(&elems),
+            structure: TypeStructure::CTuple {
+                elements: elems
+            }
+        }
+    }
+
     /// Displays the type name
     #[must_use = "this does not display the type name, it returns an object that can be displayed"]
     pub fn display<'a, 'b>(&'a self, dnis: &'b DuplicateNamesInScope) -> RustTypeNameDisplay<'a, 'b> {
